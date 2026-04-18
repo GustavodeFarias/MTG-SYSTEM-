@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <title>MTG SYSTEM — Cadastro</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-bg"></div><div class="auth-bg-grid"></div><div class="auth-bg-dots"></div>
+  <div class="auth-card" style="max-width:480px">
+    <div class="auth-logo">
+      <img src="assets/images/logo.jpeg" alt="MTG" style="width:46px;height:46px;border-radius:10px;object-fit:cover;box-shadow:0 0 16px rgba(59,130,246,0.4)" onerror="this.style.display='none'">
+      <div class="auth-logo-text">MTG SYSTEM<span>Criar Conta</span></div>
+    </div>
+    <h1 class="auth-title">Criar conta</h1>
+    <p class="auth-subtitle">Preencha os dados para se cadastrar</p>
+    <form id="regForm">
+      <div class="form-group">
+        <label class="form-label">Nome Completo *</label>
+        <div class="input-group">
+          <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <input type="text" name="name" class="form-input" placeholder="Seu nome completo" autocomplete="name">
+        </div>
+        <div class="form-error" data-error="name"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail *</label>
+        <div class="input-group">
+          <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <input type="email" name="email" class="form-input" placeholder="seu@email.com" autocomplete="email" inputmode="email">
+        </div>
+        <div class="form-error" data-error="email"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Perfil de Acesso</label>
+        <select name="role" class="form-input form-select">
+          <option value="visualizador">Visualizador — Somente leitura</option>
+          <option value="estoquista">Estoquista — Gerenciar produtos</option>
+          <option value="analista">Analista — Ver relatórios</option>
+          <option value="admin">Administrador — Acesso total</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Senha *</label>
+          <input type="password" name="password" class="form-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+          <div class="form-error" data-error="password"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar Senha *</label>
+          <input type="password" name="confirm" class="form-input" placeholder="Repita a senha">
+          <div class="form-error" data-error="confirm"></div>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-full btn-lg" id="regBtn">Criar Conta</button>
+    </form>
+    <div class="auth-footer">Já tem conta? <a href="index.html">Fazer login</a></div>
+  </div>
+</div>
+<div id="toastContainer" class="toast-container"></div>
+<script>
+  App.applyTheme();
+  redirectIfAuth();
+
+  document.getElementById('regForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    Validators.clearErrors();
+    const name = this.name.value.trim();
+    const email = this.email.value.trim();
+    const role = this.role.value;
+    const password = this.password.value;
+    const confirm = this.confirm.value;
+    const errs = {};
+    if (!name)                          errs.name     = 'Campo obrigatório';
+    if (!email)                         errs.email    = 'Campo obrigatório';
+    else if (!Validators.email(email))  errs.email    = 'E-mail inválido';
+    if (!password || password.length<6) errs.password = 'Mínimo 6 caracteres';
+    if (password !== confirm)           errs.confirm  = 'As senhas não coincidem';
+    if (Object.keys(errs).length) { Validators.showErrors(errs); return; }
+
+    const btn = document.getElementById('regBtn');
+    btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Criando...';
+
+    const r = await API.auth.register({ name, email, password, role });
+    if (r?.ok) {
+      Toast.success('Conta criada!', 'Redirecionando para o painel...');
+      setTimeout(() => window.location.href = 'dashboard.html', 1000);
+    } else {
+      Toast.error('Erro', r?.data?.message || 'Não foi possível criar a conta');
+      btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Criar Conta';
+    }
+  });
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+<div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+</body>
+</html>

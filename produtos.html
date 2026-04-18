@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTG SYSTEM — Produtos</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+</head>
+<body>
+<div class="app-shell" id="app"></div>
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Modal Produto -->
+<div id="productModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="productModalTitle">Novo Produto</div>
+      <button class="modal-close" onclick="Modal.close('productModal')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="productId">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nome do Produto *</label>
+          <input type="text" id="pName" class="form-input" placeholder="Ex: Pastilha de Freio">
+          <div class="form-error" data-error="pName"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria *</label>
+          <select id="pCategory" class="form-input form-select">
+            <option value="">Selecione...</option>
+            <option>Freios</option><option>Motor</option><option>Elétrica</option>
+            <option>Suspensão</option><option>Filtros</option><option>Embreagem</option>
+            <option>Escapamento</option><option>Transmissão</option><option>Carroceria</option><option>Outros</option>
+          </select>
+          <div class="form-error" data-error="pCategory"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Quantidade *</label>
+          <input type="number" id="pQty" class="form-input" placeholder="0" min="0">
+          <div class="form-error" data-error="pQty"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preço (R$) *</label>
+          <input type="number" id="pPrice" class="form-input" placeholder="0,00" min="0" step="0.01">
+          <div class="form-error" data-error="pPrice"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor em Libras (£)</label>
+          <input type="number" id="pPounds" class="form-input" placeholder="0.00" min="0" step="0.01" oninput="updatePoundsPreview()">
+          <div class="form-hint">Custo de importação em GBP</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Conversão Aprox. (R$)</label>
+          <div id="poundsPreview" style="padding:10px var(--s4);background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r-md);min-height:42px;display:flex;align-items:center">
+            <span style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--text-muted)">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fornecedor</label>
+        <input type="text" id="pSupplier" class="form-input" placeholder="Nome do fornecedor">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="Modal.close('productModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProduct()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+        Salvar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const session = requireAuth();
+if (session) {
+  Products.load();
+  document.getElementById('app').innerHTML = renderLayout('Produtos','produtos.html') + `
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Produtos</h1>
+        <p>Gestão completa do inventário · <span id="prodCount">${Products.all.length}</span> produtos</p>
+      </div>
+      <div class="page-header-actions">
+        ${API.auth.can('products_write')?`<button class="btn btn-primary" onclick="openCreate()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Produto
+        </button>`:''}
+      </div>
+    </div>
+    <div class="table-container">
+      <div class="table-toolbar">
+        <div class="table-search-wrap">
+          <div class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:15px;height:15px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+          <input type="text" class="form-input" id="searchInput" placeholder="Buscar por nome, SKU ou fornecedor..." style="padding-left:36px" oninput="onSearch()">
+        </div>
+        <div class="table-filters">
+          <select class="form-input form-select" id="catFilter" style="max-width:170px" onchange="onFilter()">
+            <option value="">Todas as categorias</option>
+            ${Products.getCategories().map(c=>`<option>${c}</option>`).join('')}
+          </select>
+          <select class="form-input form-select" id="stockFilter" style="max-width:150px" onchange="onFilter()">
+            <option value="">Todo estoque</option>
+            <option value="critical">Crítico (&lt;5)</option>
+            <option value="low">Baixo (&lt;10)</option>
+            <option value="ok">Normal (≥10)</option>
+          </select>
+        </div>
+      </div>
+      <div id="tableBody"></div>
+      <div id="paginationEl" class="pagination"></div>
+    </div>
+  </main>
+</div>`;
+
+  App.init();
+  renderTable();
+
+  const debouncedSearch = Helpers.debounce(() => {
+    Products.search = document.getElementById('searchInput').value;
+    Products.currentPage = 1; onFilter();
+  }, 250);
+  document.getElementById('searchInput').addEventListener('input', debouncedSearch);
+}
+
+function onFilter() {
+  Products.categoryFilter = document.getElementById('catFilter')?.value || '';
+  Products.stockFilter    = document.getElementById('stockFilter')?.value || '';
+  Products.currentPage = 1;
+  Products.applyFilters();
+  renderTable();
+}
+
+function onSearch() {
+  Products.search = document.getElementById('searchInput').value;
+  Products.currentPage = 1;
+  Products.applyFilters();
+  renderTable();
+}
+
+function renderTable() {
+  const {items,total,pages,page} = Products.getPage();
+  const canWrite = API.auth.can('products_write');
+  const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+  const ICON_DEL  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
+  const ICON_IN   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:12px;height:12px"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+  const ICON_OUT  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:12px;height:12px"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+
+  const html = items.length === 0
+    ? `<div class="table-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8"/></svg><p>Nenhum produto encontrado</p></div>`
+    : `<table>
+        <thead><tr>
+          <th onclick="sortBy('sku')" class="${Products.sortKey==='sku'?'sorted':''}">SKU</th>
+          <th onclick="sortBy('name')" class="${Products.sortKey==='name'?'sorted':''}">Produto</th>
+          <th onclick="sortBy('category')" class="${Products.sortKey==='category'?'sorted':''}">Categoria</th>
+          <th onclick="sortBy('quantity')" class="${Products.sortKey==='quantity'?'sorted':''}">Estoque</th>
+          <th onclick="sortBy('price')" class="${Products.sortKey==='price'?'sorted':''}">Preço R$</th>
+          <th onclick="sortBy('pricePounds')" class="${Products.sortKey==='pricePounds'?'sorted':''}">Valor £</th>
+          <th onclick="sortBy('createdAt')" class="${Products.sortKey==='createdAt'?'sorted':''}">Cadastrado em</th>
+          <th>Ações</th>
+        </tr></thead>
+        <tbody>
+          ${items.map(p => {
+            const st = Helpers.getStockStatus(p.quantity);
+            const pct = Math.min(100, (p.quantity/50)*100);
+            const stClass = st==='ok'?'stock-ok':st==='low'?'stock-low':'stock-critical';
+            return `<tr>
+              <td><span style="font-family:monospace;font-size:11.5px;color:var(--text-muted);font-weight:600;letter-spacing:0.5px">${p.sku}</span></td>
+              <td><div style="font-weight:600;color:var(--text-primary);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.name}">${p.name}</div>
+                  ${p.supplier?`<div style="font-size:11px;color:var(--text-faint)">${p.supplier}</div>`:''}
+              </td>
+              <td><span class="badge badge-neutral">${p.category}</span></td>
+              <td>
+                <div class="stock-indicator ${stClass}">
+                  <div class="stock-bar-track"><div class="stock-bar-fill" style="width:${pct}%"></div></div>
+                  <span class="stock-num">${p.quantity}</span>
+                  ${Helpers.stockBadge(p.quantity)}
+                </div>
+              </td>
+              <td style="font-weight:600;color:var(--text-primary)">${Formatters.currency(p.price)}</td>
+              <td style="color:${p.pricePounds>0?'#22d3ee':'var(--text-faint)'}">
+                ${p.pricePounds>0?`£ ${Number(p.pricePounds).toFixed(2)}`:'—'}
+              </td>
+              <td>
+                <div style="font-size:12.5px;color:var(--text-secondary);white-space:nowrap">${new Date(p.createdAt).toLocaleDateString('pt-BR')}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${new Date(p.createdAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+              </td>
+              <td>
+                <div class="table-actions">
+                  ${canWrite?`
+                    <button class="btn btn-ghost btn-icon btn-sm" title="Editar" onclick="openEdit('${p.id}')">${ICON_EDIT}</button>
+                    <button class="btn btn-ghost btn-icon btn-sm" title="Entrada" onclick="movRapida('${p.id}','entrada')" style="color:var(--success)">${ICON_IN}</button>
+                    <button class="btn btn-ghost btn-icon btn-sm" title="Saída" onclick="movRapida('${p.id}','saida')" style="color:var(--danger)" ${p.quantity===0?'disabled':''}>${ICON_OUT}</button>
+                    <button class="btn btn-ghost btn-icon btn-sm" title="Excluir" onclick="confirmDel('${p.id}','${p.name.replace(/'/g,"\\'")}')" style="color:var(--danger)">${ICON_DEL}</button>
+                  `:`<span style="font-size:11px;color:var(--text-faint)">Somente leitura</span>`}
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+  document.getElementById('tableBody').innerHTML = html;
+
+  // Pagination
+  const start=(page-1)*Products.perPage+1;
+  const end=Math.min(page*Products.perPage,total);
+  let pag=`<div class="pagination-info">Mostrando ${total===0?0:start}–${end} de ${total} produtos</div><div class="pagination-controls">`;
+  pag+=`<button class="page-btn" onclick="changePage(${page-1})" ${page<=1?'disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>`;
+  for(let i=1;i<=pages;i++){
+    if(pages<=7||i===1||i===pages||(i>=page-1&&i<=page+1)) pag+=`<button class="page-btn ${i===page?'active':''}" onclick="changePage(${i})">${i}</button>`;
+    else if(i===page-2||i===page+2) pag+=`<span style="color:var(--text-faint);padding:0 4px">…</span>`;
+  }
+  pag+=`<button class="page-btn" onclick="changePage(${page+1})" ${page>=pages?'disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg></button></div>`;
+  document.getElementById('paginationEl').innerHTML = pag;
+}
+
+function sortBy(key) {
+  Products.sortDir = Products.sortKey===key ? (Products.sortDir==='asc'?'desc':'asc') : 'asc';
+  Products.sortKey = key;
+  Products.applyFilters(); renderTable();
+}
+function changePage(p) {
+  if(p<1||p>Math.ceil(Products.filtered.length/Products.perPage)) return;
+  Products.currentPage=p; renderTable();
+}
+
+function openCreate() {
+  document.getElementById('productId').value='';
+  document.getElementById('productModalTitle').textContent='Novo Produto';
+  ['pName','pCategory','pQty','pPrice','pPounds','pSupplier'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('poundsPreview').innerHTML='<span style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--text-muted)">—</span>';
+  Validators.clearErrors();
+  Modal.open('productModal');
+}
+
+function openEdit(id) {
+  Products.load();
+  const p=Products.getById(id); if(!p) return;
+  document.getElementById('productId').value=p.id;
+  document.getElementById('productModalTitle').textContent='Editar Produto';
+  document.getElementById('pName').value=p.name;
+  document.getElementById('pCategory').value=p.category;
+  document.getElementById('pQty').value=p.quantity;
+  document.getElementById('pPrice').value=p.price;
+  document.getElementById('pPounds').value=p.pricePounds||'';
+  document.getElementById('pSupplier').value=p.supplier||'';
+  updatePoundsPreview();
+  Validators.clearErrors();
+  Modal.open('productModal');
+}
+
+function updatePoundsPreview() {
+  const v=parseFloat(document.getElementById('pPounds')?.value)||0;
+  const el=document.getElementById('poundsPreview');
+  if(!el) return;
+  if(v>0) {
+    const brl=(v*6.40).toFixed(2).replace('.',',');
+    el.innerHTML=`<span style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--success)">R$ ${brl}</span>`;
+  } else {
+    el.innerHTML='<span style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--text-muted)">—</span>';
+  }
+}
+
+function saveProduct() {
+  Validators.clearErrors();
+  const id=document.getElementById('productId').value;
+  const name=document.getElementById('pName').value.trim();
+  const category=document.getElementById('pCategory').value;
+  const qty=document.getElementById('pQty').value;
+  const price=document.getElementById('pPrice').value;
+  const pricePounds=document.getElementById('pPounds').value;
+  const supplier=document.getElementById('pSupplier').value.trim();
+  const errs={};
+  if(!name) errs.pName='Campo obrigatório';
+  if(!category) errs.pCategory='Selecione uma categoria';
+  if(qty===''||isNaN(qty)||Number(qty)<0) errs.pQty='Quantidade inválida';
+  if(price===''||isNaN(price)||Number(price)<0) errs.pPrice='Preço inválido';
+  if(Object.keys(errs).length){Validators.showErrors(errs);return;}
+  const data={name,category,quantity:qty,price,pricePounds,supplier};
+  if(id) { Products.update(id,data); Toast.success('Produto atualizado!',name); }
+  else { Products.create(data); Toast.success('Produto criado!',name); }
+  Modal.close('productModal');
+  Products.load(); Products.applyFilters(); renderTable();
+  document.getElementById('prodCount').textContent=Products.all.length;
+}
+
+function confirmDel(id, name) {
+  Modal.confirm({title:'Excluir produto?',message:`"${name}" será removido permanentemente.`,onConfirm:()=>{
+    Products.delete(id); Toast.success('Produto removido',name);
+    Products.load(); Products.applyFilters(); renderTable();
+  }});
+}
+
+function movRapida(id, tipo) {
+  const qty = prompt(`Quantidade para ${tipo==='entrada'?'ENTRADA':'SAÍDA'}:`);
+  if(!qty||isNaN(qty)||Number(qty)<=0) return;
+  const motivo = prompt('Motivo (opcional):') || '';
+  const r=Estoque.registrar(id,tipo,qty,motivo,session.name);
+  if(r.success){ Toast.success(tipo==='entrada'?'Entrada registrada!':'Saída registrada!',`Novo estoque: ${r.novaQtd}`); Products.load(); Products.applyFilters(); renderTable(); }
+  else Toast.error('Erro',r.message);
+}
+</script>
+<div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(r => console.log('[SW] Registered:', r.scope))
+        .catch(e => console.log('[SW] Error:', e));
+    });
+  }
+</script>
+</body>
+</html>

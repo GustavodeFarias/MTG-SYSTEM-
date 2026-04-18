@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MTG SYSTEM">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>MTG SYSTEM — Manual do Usuário</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+  
+  
+  <style>
+    .manual-hero {
+      background: linear-gradient(135deg, var(--bg-mid) 0%, var(--bg-surface) 100%);
+      border: 1px solid var(--border); border-radius: var(--r-xl);
+      padding: var(--s10); margin-bottom: var(--s8); position: relative; overflow: hidden;
+    }
+    .manual-hero::before {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 240px; height: 240px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%);
+    }
+    .manual-hero h1 { font-family: var(--font-h); font-size: 38px; font-weight: 800; color: var(--text-primary); letter-spacing: -1px; margin-bottom: var(--s2); }
+    .manual-hero p { font-size: 15px; color: var(--text-muted); max-width: 560px; }
+    .manual-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-subtle); color: var(--brand-400); border: 1px solid rgba(59,130,246,0.2); border-radius: var(--r-full); padding: 4px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: var(--s4); }
+    .toc { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s6); margin-bottom: var(--s8); }
+    .toc-title { font-family: var(--font-h); font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: var(--s4); display: flex; align-items: center; gap: var(--s2); }
+    .toc-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
+    .toc-item { display: flex; align-items: center; gap: var(--s2); padding: 8px var(--s3); border-radius: var(--r-md); color: var(--brand-400); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background var(--t-fast); text-decoration: none; }
+    .toc-item:hover { background: var(--brand-subtle); }
+    .toc-num { width: 22px; height: 22px; background: var(--brand-subtle); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--brand-400); flex-shrink: 0; }
+    .section { margin-bottom: var(--s10); scroll-margin-top: 80px; }
+    .section-title { font-family: var(--font-h); font-size: 26px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; margin-bottom: var(--s2); display: flex; align-items: center; gap: var(--s3); }
+    .section-num { width: 36px; height: 36px; background: linear-gradient(135deg, var(--brand-600), var(--brand-400)); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; color: white; flex-shrink: 0; }
+    .section-desc { font-size: 14px; color: var(--text-muted); margin-bottom: var(--s6); padding-left: 48px; }
+    .section hr { border: none; border-top: 1px solid var(--border); margin-bottom: var(--s6); }
+    .step-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s5); margin-bottom: var(--s4); display: flex; gap: var(--s4); transition: border-color var(--t-fast); }
+    .step-card:hover { border-color: var(--border-light); }
+    .step-num { width: 32px; height: 32px; background: var(--brand-subtle); border: 1.5px solid rgba(59,130,246,0.3); border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; font-family: var(--font-h); font-size: 14px; font-weight: 800; color: var(--brand-400); flex-shrink: 0; margin-top: 2px; }
+    .step-content h4 { font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .step-content p { font-size: 13.5px; color: var(--text-muted); line-height: 1.7; }
+    .step-content code { background: var(--bg-elevated); color: var(--brand-300); padding: 2px 7px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+    .info-box { border-radius: var(--r-md); padding: var(--s4); margin: var(--s4) 0; display: flex; gap: var(--s3); }
+    .info-box svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 1px; }
+    .info-tip  { background: var(--info-subtle);    border: 1px solid rgba(59,130,246,0.2); color: var(--brand-300); }
+    .info-warn { background: var(--warning-subtle); border: 1px solid rgba(245,158,11,0.2); color: var(--warning); }
+    .info-ok   { background: var(--success-subtle); border: 1px solid rgba(16,185,129,0.2); color: var(--success); }
+    .info-box p { font-size: 13.5px; line-height: 1.6; }
+    .perm-table { width: 100%; border-collapse: collapse; border-radius: var(--r-lg); overflow: hidden; }
+    .perm-table th { background: var(--bg-elevated); padding: 10px var(--s4); text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted); }
+    .perm-table td { padding: 12px var(--s4); border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-secondary); }
+    .perm-yes { color: var(--success); font-weight: 700; font-size: 16px; }
+    .perm-no  { color: var(--text-faint); font-size: 16px; }
+    .shortcut-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+    .shortcut-item { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s3) var(--s4); display: flex; align-items: center; justify-content: space-between; }
+    .shortcut-key { display: flex; gap: 4px; }
+    .kbd { background: var(--bg-elevated); border: 1px solid var(--border-light); border-radius: 4px; padding: 3px 8px; font-family: monospace; font-size: 12px; font-weight: 700; color: var(--text-primary); box-shadow: 0 2px 0 var(--border-light); }
+    .shortcut-desc { font-size: 13px; color: var(--text-muted); }
+    .glossary-item { padding: var(--s4) 0; border-bottom: 1px solid var(--border); }
+    .glossary-term { font-weight: 700; color: var(--brand-400); font-size: 14px; margin-bottom: 4px; }
+    .glossary-def { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .print-btn { position: fixed; bottom: var(--s6); right: 80px; z-index: var(--z-drop); }
+    @media print {
+      .sidebar, .topbar, .print-btn, [vw] { display: none !important; }
+      .main-content { margin-left: 0 !important; }
+      .page-content { padding: 0; }
+    }
+    @media(max-width:600px) { .toc-list { grid-template-columns: 1fr; } .shortcut-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="app-shell" id="app"></div>
+<div id="toastContainer" class="toast-container"></div>
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal modal-sm"><div class="modal-body"><div class="confirm-dialog">
+    <div class="confirm-icon danger"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+    <div class="confirm-title">Confirmar</div><div class="confirm-message"></div>
+  </div></div><div class="modal-footer">
+    <button class="btn btn-secondary" onclick="Modal.close('confirmModal')">Cancelar</button>
+    <button class="btn btn-danger" id="confirmBtn">Ok</button>
+  </div></div>
+</div>
+
+<script>
+const session = requireAuth();
+if (session) {
+  document.getElementById('app').innerHTML = renderLayout('Manual do Usuário', 'manual.html') + `
+  <main class="page-content" style="max-width:900px">
+
+    <!-- Hero -->
+    <div class="manual-hero">
+      <div class="manual-badge">
+        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        Manual do Usuário — v2.0
+      </div>
+      <h1>MTG SYSTEM ERP</h1>
+      <p>Guia completo de utilização do sistema de gestão de estoque. Aqui você encontra tudo o que precisa para operar o sistema com eficiência.</p>
+      <div style="display:flex;gap:var(--s3);margin-top:var(--s5);flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="window.print()">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir / Salvar PDF
+        </button>
+        <button class="btn btn-secondary" onclick="App.navigate('dashboard.html')">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Ir ao Dashboard
+        </button>
+      </div>
+    </div>
+
+    <!-- Sumário -->
+    <div class="toc">
+      <div class="toc-title">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--brand-400)" fill="none" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Sumário
+      </div>
+      <div class="toc-list">
+        ${[
+          [1,'Visão Geral do Sistema'],
+          [2,'Acesso e Login'],
+          [3,'Dashboard'],
+          [4,'Módulo de Produtos'],
+          [5,'Movimentação de Estoque'],
+          [6,'Relatórios'],
+          [7,'Gestão de Usuários'],
+          [8,'Perfis e Permissões'],
+          [9,'Configurações'],
+          [10,'Dicas e Atalhos'],
+          [11,'Perguntas Frequentes'],
+          [12,'Glossário'],
+        ].map(([n,t]) => `<a class="toc-item" href="#sec${n}"><div class="toc-num">${n}</div>${t}</a>`).join('')}
+      </div>
+    </div>
+
+    <!-- 1. Visão Geral -->
+    <div class="section" id="sec1">
+      <div class="section-title"><div class="section-num">1</div>Visão Geral do Sistema</div>
+      <p class="section-desc">Conheça a estrutura e os principais módulos do MTG SYSTEM ERP.</p>
+      <hr>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--s4);margin-bottom:var(--s6)">
+        ${[
+          ['Dashboard','Painel com KPIs, gráficos e alertas em tempo real','var(--brand-400)','M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z'],
+          ['Produtos','Cadastro completo com SKU, categoria, preço e estoque','var(--success)','M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8'],
+          ['Estoque','Entradas e saídas com histórico detalhado','var(--warning)','M23 6L13.5 15.5 8.5 10.5 1 18'],
+          ['Relatórios','Análises, exportação CSV e PDF','var(--cyan-400)','M18 20V10M12 20V4M6 20v-6'],
+          ['Usuários','Gestão de contas e permissões por perfil','var(--danger)','M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2'],
+          ['Manual','Este documento — guia completo de uso','#a78bfa','M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z'],
+        ].map(([t,d,c,path]) => `<div class="step-card" style="flex-direction:column;gap:var(--s3)">
+          <div style="width:36px;height:36px;border-radius:var(--r-md);background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="${c}" fill="none" stroke-width="1.8"><path d="${path}"/></svg>
+          </div>
+          <div><div style="font-weight:700;color:var(--text-primary);font-size:14px;margin-bottom:3px">${t}</div>
+          <div style="font-size:12.5px;color:var(--text-muted)">${d}</div></div>
+        </div>`).join('')}
+      </div>
+      <div class="info-box info-ok">
+        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <p><strong>100% offline:</strong> O MTG SYSTEM funciona diretamente no navegador, sem necessidade de internet (exceto VLibras). Todos os dados são salvos localmente via localStorage.</p>
+      </div>
+    </div>
+
+    <!-- 2. Login -->
+    <div class="section" id="sec2">
+      <div class="section-title"><div class="section-num">2</div>Acesso e Login</div>
+      <p class="section-desc">Como acessar o sistema e criar sua conta.</p>
+      <hr>
+      ${[
+        ['Abrir o sistema','Abra o arquivo <code>index.html</code> pelo Live Server no VS Code, ou acesse o link do GitHub Pages caso esteja publicado.'],
+        ['Inserir credenciais','Informe seu <strong>e-mail</strong> e <strong>senha</strong> cadastrados. Clique em <em>"Entrar no Sistema"</em>.'],
+        ['Criar conta','Clique em <em>"Criar conta"</em> na tela de login. Preencha nome, e-mail, perfil e senha (mínimo 6 caracteres).'],
+        ['Recuperar acesso','Caso esqueça a senha, um administrador pode redefini-la em <strong>Usuários → Editar usuário</strong>.'],
+        ['Logout automático','O sistema faz logout automático após <strong>30 minutos de inatividade</strong> por segurança.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+      <div class="info-box info-warn">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <p><strong>Atenção:</strong> Os dados ficam salvos no navegador. Se limpar os dados do navegador ou usar outro computador, será necessário recadastrar tudo. Faça backups exportando os relatórios em CSV regularmente.</p>
+      </div>
+    </div>
+
+    <!-- 3. Dashboard -->
+    <div class="section" id="sec3">
+      <div class="section-title"><div class="section-num">3</div>Dashboard</div>
+      <p class="section-desc">Visão geral em tempo real do seu estoque.</p>
+      <hr>
+      ${[
+        ['Cards KPI','Exibem Total de Produtos, Estoque Crítico, Valor Total do Estoque e Total de Movimentações. Clique em qualquer card para navegar para a seção correspondente.'],
+        ['Alerta de estoque crítico','Aparece automaticamente no topo do dashboard quando há produtos com menos de 5 unidades. Clique em "Ver produtos" para ir direto à listagem filtrada.'],
+        ['Gráfico Entrada vs Saída','Barras comparativas das movimentações mensais. Atualiza conforme você registra movimentos no módulo de Estoque.'],
+        ['Gráfico por Categoria','Donut chart mostrando a distribuição de produtos por categoria. Útil para identificar concentrações de estoque.'],
+        ['Estoque Crítico (card)','Lista rápida dos produtos com nível crítico. Atualiza em tempo real conforme você cadastra ou movimenta produtos.'],
+        ['Atividade Recente','Log das últimas ações realizadas no sistema por qualquer usuário.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 4. Produtos -->
+    <div class="section" id="sec4">
+      <div class="section-title"><div class="section-num">4</div>Módulo de Produtos</div>
+      <p class="section-desc">Cadastro, edição, busca e organização do inventário.</p>
+      <hr>
+      ${[
+        ['Cadastrar produto','Clique em <strong>"+ Novo Produto"</strong>. Preencha: Nome, Categoria, Quantidade, Preço (R$), Valor em Libras (£) e Fornecedor. O <strong>SKU é gerado automaticamente</strong> no formato <code>MTG-00001</code>.'],
+        ['Editar produto','Clique no ícone de lápis ✎ na linha do produto. Altere os campos desejados e clique em <em>"Salvar"</em>.'],
+        ['Excluir produto','Clique no ícone de lixeira na linha do produto. Uma confirmação será solicitada antes da exclusão definitiva.'],
+        ['Buscar e filtrar','Use a barra de busca para pesquisar por nome, SKU ou fornecedor. Use os filtros de categoria e status de estoque para refinar os resultados.'],
+        ['Ordenar colunas','Clique em qualquer cabeçalho da tabela (SKU, Produto, Categoria, etc.) para ordenar. Clique novamente para inverter a ordem.'],
+        ['Indicadores de estoque','<span style="color:var(--success)">Verde = Normal</span> (≥10), <span style="color:var(--warning)">Amarelo = Baixo</span> (5–9), <span style="color:var(--danger)">Vermelho = Crítico</span> (0–4).'],
+        ['Data de cadastro','A coluna "Cadastrado em" mostra data e hora exata em que o produto foi inserido no sistema.'],
+        ['Campo Valor £ Libras','Registre o custo de importação em libras esterlinas. O sistema exibe automaticamente a conversão aproximada para R$.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 5. Estoque -->
+    <div class="section" id="sec5">
+      <div class="section-title"><div class="section-num">5</div>Movimentação de Estoque</div>
+      <p class="section-desc">Registre entradas e saídas com rastreabilidade completa.</p>
+      <hr>
+      ${[
+        ['Registrar entrada','Na aba <em>"Produtos / Ação Rápida"</em>, clique em <strong>"↑ Entrada"</strong> no produto desejado. Informe a quantidade e o motivo (ex: Compra, Devolução).'],
+        ['Registrar saída','Clique em <strong>"↓ Saída"</strong> no produto. O sistema verifica automaticamente se há estoque suficiente antes de confirmar.'],
+        ['Preview em tempo real','Ao digitar a quantidade, o sistema mostra imediatamente qual será o novo estoque após a movimentação.'],
+        ['Histórico de movimentações','A aba <em>"Movimentações"</em> lista todas as operações com: tipo, produto, quantidade, estoque antes/depois, motivo, usuário e data/hora.'],
+        ['Filtrar movimentações','Use a busca e o filtro de tipo (Entradas/Saídas) para localizar movimentações específicas.'],
+        ['Exportar histórico','Clique em <strong>"Exportar CSV"</strong> para baixar todo o histórico de movimentações em formato de planilha.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+      <div class="info-box info-tip">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p><strong>Dica:</strong> Sempre informe um motivo ao registrar movimentações. Isso facilita auditorias e identificação de divergências no futuro.</p>
+      </div>
+    </div>
+
+    <!-- 6. Relatórios -->
+    <div class="section" id="sec6">
+      <div class="section-title"><div class="section-num">6</div>Relatórios</div>
+      <p class="section-desc">Análise de dados e exportação do inventário.</p>
+      <hr>
+      ${[
+        ['Estoque Completo','Lista todos os produtos com SKU, quantidades, preços em R$ e £, valor total e status. Inclui o total geral do inventário.'],
+        ['Críticos e Baixos','Mostra apenas produtos com estoque crítico (< 5) ou baixo (< 10). Ideal para planejar reposições.'],
+        ['Por Categoria','Distribuição de produtos e valor por categoria, com barra de progresso percentual.'],
+        ['Valor por Produto','Ranking de produtos por preço unitário com percentual de participação no valor total do estoque.'],
+        ['Exportar CSV','Clique em <strong>"Exportar CSV"</strong> para baixar o relatório em formato compatível com Excel e Google Sheets.'],
+        ['Exportar PDF','Clique em <strong>"Exportar PDF"</strong> para gerar o relatório em formato PDF (simulado no navegador).'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 7. Usuários -->
+    <div class="section" id="sec7">
+      <div class="section-title"><div class="section-num">7</div>Gestão de Usuários</div>
+      <p class="section-desc">Criação e gerenciamento de contas (exclusivo para Administradores).</p>
+      <hr>
+      ${[
+        ['Criar usuário','Clique em <strong>"+ Novo Usuário"</strong>. Defina nome, e-mail, perfil de acesso e senha. O e-mail deve ser único no sistema.'],
+        ['Editar usuário','Clique no ícone ✎. Você pode alterar nome, perfil, status e senha (deixe em branco para manter a atual).'],
+        ['Ativar / Desativar','Clique no ícone de relógio para alternar entre Ativo e Inativo. Usuários inativos não conseguem fazer login.'],
+        ['Bloquear usuário','Clique no ícone de bloqueio 🚫. Usuários bloqueados são impedidos de acessar o sistema e são notificados.'],
+        ['Excluir usuário','Clique na lixeira. <strong>Atenção:</strong> não é possível excluir o próprio usuário logado.'],
+        ['Histórico de ações','A seção inferior da página exibe todas as ações realizadas no sistema: logins, cadastros, edições e exclusões.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 8. Permissões -->
+    <div class="section" id="sec8">
+      <div class="section-title"><div class="section-num">8</div>Perfis e Permissões</div>
+      <p class="section-desc">Cada perfil tem acesso específico às funcionalidades do sistema.</p>
+      <hr>
+      <div class="table-container" style="margin-bottom:var(--s4)">
+        <table class="perm-table">
+          <thead><tr>
+            <th>Funcionalidade</th>
+            <th>Admin</th>
+            <th>Estoquista</th>
+            <th>Analista</th>
+            <th>Visualizador</th>
+          </tr></thead>
+          <tbody>
+            ${[
+              ['Dashboard',            '✓','✓','✓','✓'],
+              ['Ver Produtos',         '✓','✓','✓','✓'],
+              ['Criar / Editar Produto','✓','✓','—','—'],
+              ['Excluir Produto',      '✓','✓','—','—'],
+              ['Movimentar Estoque',   '✓','✓','—','—'],
+              ['Acessar Relatórios',   '✓','✓','✓','—'],
+              ['Exportar Dados',       '✓','✓','✓','—'],
+              ['Gerenciar Usuários',   '✓','—','—','—'],
+              ['Configurações do Sistema','✓','—','—','—'],
+            ].map(([f,...perms]) => `<tr>
+              <td style="font-weight:500;color:var(--text-primary)">${f}</td>
+              ${perms.map(p => `<td class="${p==='✓'?'perm-yes':'perm-no'}">${p}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box info-tip">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>As permissões são verificadas em cada ação. Se você tentar realizar uma operação sem permissão, o sistema exibirá uma mensagem de acesso negado.</p>
+      </div>
+    </div>
+
+    <!-- 9. Configurações -->
+    <div class="section" id="sec9">
+      <div class="section-title"><div class="section-num">9</div>Configurações</div>
+      <p class="section-desc">Personalize o sistema e gerencie sua conta.</p>
+      <hr>
+      ${[
+        ['Alterar nome','Em <em>Meu Perfil</em>, edite o campo "Nome Completo" e salve. O nome será atualizado na sidebar imediatamente.'],
+        ['Alterar senha','Em <em>Meu Perfil</em>, preencha os campos "Nova Senha" e "Confirmar". Deixe em branco para manter a senha atual.'],
+        ['Modo escuro / claro','Use o toggle em <em>Aparência</em> para alternar entre o tema escuro (padrão) e o tema claro. A preferência é salva automaticamente.'],
+        ['Limpar cache','Remove o histórico de logs do sistema sem apagar produtos ou usuários.'],
+        ['Resetar sistema','Apaga todos os dados e recria o banco com os dados de demonstração. Use apenas para testes.'],
+        ['Zona de Perigo (Admin)','A opção "Apagar todos os dados" remove absolutamente tudo do sistema. Esta ação é irreversível.'],
+      ].map(([t,d],i) => `<div class="step-card"><div class="step-num">${i+1}</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 10. Atalhos -->
+    <div class="section" id="sec10">
+      <div class="section-title"><div class="section-num">10</div>Dicas e Atalhos</div>
+      <p class="section-desc">Agilize o uso do sistema com estas dicas.</p>
+      <hr>
+      <div class="shortcut-grid" style="margin-bottom:var(--s6)">
+        ${[
+          [['ESC'],'Fechar modal aberto'],
+          [['Ctrl','P'],'Imprimir / Salvar PDF'],
+          [['F5'],'Atualizar dados da página'],
+          [['Tab'],'Navegar entre campos do formulário'],
+          [['Enter'],'Confirmar formulário'],
+          [['Ctrl','F'],'Buscar na página (navegador)'],
+        ].map(([keys,desc]) => `<div class="shortcut-item">
+          <div class="shortcut-key">${keys.map(k => `<span class="kbd">${k}</span>`).join('<span style="color:var(--text-faint);margin:0 2px">+</span>')}</div>
+          <span class="shortcut-desc">${desc}</span>
+        </div>`).join('')}
+      </div>
+      <div style="font-family:var(--font-h);font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:var(--s4)">💡 Dicas de produtividade</div>
+      ${[
+        ['Use a busca com SKU','Pesquise pelo código MTG-00001 para localizar um produto específico instantaneamente.'],
+        ['Ordene por "Cadastrado em"','Clique na coluna para ver os produtos mais recentes ou mais antigos primeiro.'],
+        ['Filtro de estoque crítico','Na página de Produtos, use o filtro "Crítico" para ver apenas os itens que precisam de reposição urgente.'],
+        ['Exporte regularmente','Faça exportações CSV semanais como backup dos seus dados de inventário.'],
+        ['VLibras','O botão azul no canto da tela ativa a tradução para Língua de Sinais (LIBRAS) — acessibilidade garantida.'],
+      ].map(([t,d]) => `<div class="step-card"><div style="font-size:16px;margin-top:2px">→</div><div class="step-content"><h4>${t}</h4><p>${d}</p></div></div>`).join('')}
+    </div>
+
+    <!-- 11. FAQ -->
+    <div class="section" id="sec11">
+      <div class="section-title"><div class="section-num">11</div>Perguntas Frequentes</div>
+      <p class="section-desc">Respostas para as dúvidas mais comuns.</p>
+      <hr>
+      ${[
+        ['Os dados são perdidos ao fechar o navegador?','Não. Os dados ficam salvos no localStorage do navegador e persistem entre sessões. Só são perdidos se você limpar os dados do navegador manualmente ou usar o modo anônimo.'],
+        ['Posso usar em dois computadores ao mesmo tempo?','Não diretamente. O localStorage é local de cada navegador. Para compartilhar dados entre máquinas seria necessário um backend. Como solução alternativa, exporte o CSV e importe manualmente.'],
+        ['Como faço backup dos meus dados?','Vá em Relatórios → Estoque Completo → Exportar CSV. Faça isso regularmente para manter um histórico dos seus dados.'],
+        ['O SKU é editável?','Não. O SKU é gerado automaticamente no formato MTG-XXXXX e não pode ser alterado para garantir a unicidade dos produtos.'],
+        ['Esqueci minha senha, o que faço?','Peça ao administrador para redefinir sua senha em Usuários → Editar usuário.'],
+        ['Como adicionar novas categorias?','No formulário de produto, as categorias disponíveis são pré-definidas. Para adicionar novas, edite o arquivo produtos.html na lista do campo select de categoria.'],
+        ['O VLibras não está funcionando','O VLibras precisa de conexão com a internet para carregar. Verifique sua conexão ou tente novamente mais tarde.'],
+      ].map(([p,r]) => `<div class="step-card" style="flex-direction:column;gap:var(--s3)">
+        <h4 style="font-size:14.5px;font-weight:700;color:var(--text-primary)">❓ ${p}</h4>
+        <p style="font-size:13.5px;color:var(--text-muted);line-height:1.7">${r}</p>
+      </div>`).join('')}
+    </div>
+
+    <!-- 12. Glossário -->
+    <div class="section" id="sec12">
+      <div class="section-title"><div class="section-num">12</div>Glossário</div>
+      <p class="section-desc">Termos utilizados no sistema.</p>
+      <hr>
+      <div class="card">
+        ${[
+          ['SKU','Stock Keeping Unit — Código único de identificação de cada produto no sistema (ex: MTG-00001).'],
+          ['Estoque Crítico','Produto com quantidade inferior a 5 unidades. Requer reposição urgente.'],
+          ['Estoque Baixo','Produto com quantidade entre 5 e 9 unidades. Requer atenção.'],
+          ['Entrada','Movimentação que aumenta a quantidade em estoque (compra, devolução, ajuste positivo).'],
+          ['Saída','Movimentação que reduz a quantidade em estoque (venda, uso, perda, ajuste negativo).'],
+          ['KPI','Key Performance Indicator — Indicador-chave de desempenho exibido nos cards do Dashboard.'],
+          ['localStorage','Tecnologia do navegador que permite salvar dados localmente, sem necessidade de servidor ou banco de dados externo.'],
+          ['Perfil de Acesso','Nível de permissão do usuário: Admin, Estoquista, Analista ou Visualizador.'],
+          ['Log / Histórico','Registro cronológico de todas as ações realizadas no sistema, com data, hora e usuário responsável.'],
+          ['VLibras','Plugin oficial do governo brasileiro que traduz conteúdo de sites para a Língua Brasileira de Sinais (LIBRAS).'],
+        ].map(([t,d]) => `<div class="glossary-item"><div class="glossary-term">${t}</div><div class="glossary-def">${d}</div></div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Footer do manual -->
+    <div style="margin-top:var(--s10);padding:var(--s6);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-lg);text-align:center">
+      <div style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px">MTG SYSTEM ERP — Manual do Usuário</div>
+      <div style="font-size:12px;color:var(--text-muted)">Versão 2.0 · Documento gerado pelo sistema · Sujeito a atualizações</div>
+      <div style="margin-top:var(--s4)">
+        <button class="btn btn-primary" onclick="window.print()">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir / Salvar como PDF
+        </button>
+      </div>
+    </div>
+  </main>
+</div>`;
+  App.init();
+}
+</script>
+<div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(r => console.log('[SW] Registered:', r.scope))
+        .catch(e => console.log('[SW] Error:', e));
+    });
+  }
+</script>
+</body>
+</html>

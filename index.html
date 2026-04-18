@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MTG SYSTEM">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>MTG SYSTEM — Login</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-bg"></div>
+  <div class="auth-bg-grid"></div>
+  <div class="auth-bg-dots"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <img src="assets/images/logo.jpeg" alt="MTG SYSTEM"
+           style="width:46px;height:46px;border-radius:10px;object-fit:cover;box-shadow:0 0 16px rgba(59,130,246,0.4)"
+           onerror="this.style.display='none'">
+      <div class="auth-logo-text">MTG SYSTEM<span>ERP · Development</span></div>
+    </div>
+    <h1 class="auth-title">Bem-vindo de volta</h1>
+    <p class="auth-subtitle">Faça login para acessar o sistema</p>
+
+    <div id="loginError" class="alert alert-danger" style="display:none">
+      <div class="alert-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <span id="loginErrorMsg" class="alert-text"></span>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <div class="input-group">
+          <div class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <input type="email" name="email" class="form-input" placeholder="seu@email.com" autocomplete="email" inputmode="email">
+        </div>
+        <div class="form-error" data-error="email"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <div class="input-group" style="position:relative">
+          <div class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+            </svg>
+          </div>
+          <input type="password" name="password" id="pwdInput" class="form-input" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" onclick="togglePwd()" class="input-icon-right"
+                  style="right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted)">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="form-error" data-error="password"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full btn-lg" style="margin-top:8px" id="loginBtn">
+        Entrar no Sistema
+      </button>
+    </form>
+
+    <div class="auth-footer">Não tem conta? <a href="registro.html">Criar conta</a></div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div id="statusDot" style="width:6px;height:6px;border-radius:50%;background:var(--text-faint)"></div>
+      <span id="statusText" style="font-size:11px;color:var(--text-faint);letter-spacing:0.5px">Verificando servidor...</span>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+  App.applyTheme();
+  redirectIfAuth();
+
+  // Check server connectivity
+  fetch('/api/auth/me', { method: 'GET' })
+    .then(() => {
+      document.getElementById('statusDot').style.cssText = 'width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)';
+      document.getElementById('statusText').textContent = 'Servidor online';
+      document.getElementById('statusText').style.color = 'var(--text-faint)';
+    })
+    .catch(() => {
+      document.getElementById('statusDot').style.background = 'var(--warning)';
+      document.getElementById('statusText').textContent = 'Servidor offline';
+      document.getElementById('statusText').style.color = 'var(--warning)';
+    });
+
+  function togglePwd() {
+    const i = document.getElementById('pwdInput');
+    i.type = i.type === 'password' ? 'text' : 'password';
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    Validators.clearErrors();
+
+    const email    = this.email.value.trim();
+    const password = this.password.value;
+    const errs = {};
+    if (!email)                       errs.email    = 'Campo obrigatório';
+    else if (!Validators.email(email)) errs.email    = 'E-mail inválido';
+    if (!password)                     errs.password = 'Campo obrigatório';
+    if (Object.keys(errs).length) { Validators.showErrors(errs); return; }
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    btn.textContent = 'Verificando...';
+
+    const r = await API.auth.login(email, password);
+
+    if (r?.ok) {
+      Toast.success('Login realizado!', 'Redirecionando...');
+      setTimeout(() => window.location.href = 'dashboard.html', 600);
+    } else {
+      const msg = r?.data?.message || 'Erro ao conectar com o servidor';
+      document.getElementById('loginError').style.display = 'flex';
+      document.getElementById('loginErrorMsg').textContent = msg;
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+      btn.textContent = 'Entrar no Sistema';
+    }
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  }
+</script>
+<div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+</body>
+</html>

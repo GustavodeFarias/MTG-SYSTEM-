@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <title>MTG SYSTEM — Dashboard</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+</head>
+<body>
+<div class="app-shell" id="app">
+  <!-- Skeleton loading -->
+  <div style="display:flex;width:100%;min-height:100vh">
+    <div style="width:256px;background:var(--bg-mid);border-right:1px solid var(--border);flex-shrink:0"></div>
+    <div style="flex:1;padding:24px">
+      <div class="skeleton" style="height:32px;width:200px;margin-bottom:24px"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
+        ${[1,2,3,4].map(()=>'<div class="skeleton" style="height:110px;border-radius:14px"></div>').join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="skeleton" style="height:240px;border-radius:14px"></div>
+        <div class="skeleton" style="height:240px;border-radius:14px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toastContainer" class="toast-container"></div>
+
+<script>
+const session = requireAuth();
+if (session) {
+  App.applyTheme();
+
+  async function loadDashboard() {
+    const r = await API.dashboard.get();
+    if (!r?.ok) {
+      Toast.error('Erro', 'Não foi possível carregar o dashboard');
+      return;
+    }
+    const d = r.data;
+    const COLORS = ['#3b82f6','#22d3ee','#10b981','#f59e0b','#ef4444','#8b5cf6','#f97316','#06b6d4'];
+
+    // Donut chart
+    const total = d.byCategory.reduce((s,c)=>s+c.count, 0) || 1;
+    let cum = 0;
+    const segs = d.byCategory.slice(0,6).map((cat,i) => {
+      const a = cat.count/total*360, r=48, cx=60, cy=60;
+      const s=(cum-90)*Math.PI/180, e=(cum+a-90)*Math.PI/180;
+      const x1=cx+r*Math.cos(s),y1=cy+r*Math.sin(s),x2=cx+r*Math.cos(e),y2=cy+r*Math.sin(e);
+      cum+=a;
+      return `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${a>180?1:0},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${COLORS[i]}"/>`;
+    }).join('');
+
+    // Bar chart from monthly stats
+    const maxBar = Math.max(...d.monthly.map(m=>Math.max(m.entradas,m.saidas)), 1);
+
+    const currency = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+    const timeAgo = s => {
+      const diff = Math.floor((Date.now()-new Date(s))/1000);
+      if(diff<60) return 'Agora';
+      if(diff<3600) return `${Math.floor(diff/60)}min atrás`;
+      if(diff<86400) return `${Math.floor(diff/3600)}h atrás`;
+      return `${Math.floor(diff/86400)}d atrás`;
+    };
+
+    document.getElementById('app').innerHTML = renderLayout('Dashboard','dashboard.html') + `
+    <main class="page-content">
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Dashboard</h1>
+          <p>Visão geral do estoque · ${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary btn-sm" onclick="App.navigate('relatorios.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Relatórios
+          </button>
+          ${API.auth.can('products_write')?`<button class="btn btn-primary btn-sm" onclick="App.navigate('produtos.html')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Produto
+          </button>`:''}
+          <button class="btn btn-ghost btn-icon btn-sm" onclick="loadDashboard()" title="Atualizar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="width:14px;height:14px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      ${d.criticalCount>0?`<div class="alert alert-danger" style="margin-bottom:var(--s6)">
+        <div class="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <span class="alert-text"><strong>${d.criticalCount} produto(s) com estoque crítico!</strong> <a href="produtos.html?stock=critical" style="color:inherit;font-weight:600;text-decoration:underline">Ver agora →</a></span>
+      </div>`:''}
+
+      <div class="kpi-grid">
+        <div class="kpi-card" style="--kpi-color:var(--brand-400);--kpi-bg:var(--brand-subtle)" onclick="App.navigate('produtos.html')">
+          <div class="kpi-glow"></div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+          <div class="kpi-value">${d.totalProducts}</div>
+          <div class="kpi-label">Total de Produtos</div>
+          <div class="kpi-change neutral">↗ ${d.byCategory.length} categorias</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--danger);--kpi-bg:var(--danger-subtle)" onclick="App.navigate('produtos.html')">
+          <div class="kpi-glow" style="--kpi-bg:var(--danger-subtle)"></div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+          <div class="kpi-value" style="color:var(--danger)">${d.criticalCount}</div>
+          <div class="kpi-label">Estoque Crítico</div>
+          ${d.criticalCount>0?`<div class="kpi-change down">↓ Atenção urgente</div>`:`<div class="kpi-change up">✓ Tudo normal</div>`}
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--success);--kpi-bg:var(--success-subtle)">
+          <div class="kpi-glow" style="--kpi-bg:var(--success-subtle)"></div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+          <div class="kpi-value" style="font-size:${d.totalValue>99999?'18px':'28px'}">${currency(d.totalValue)}</div>
+          <div class="kpi-label">Valor Total do Estoque</div>
+          <div class="kpi-change up">↑ Inventário</div>
+        </div>
+        <div class="kpi-card" style="--kpi-color:var(--warning);--kpi-bg:var(--warning-subtle)" onclick="App.navigate('estoque.html')">
+          <div class="kpi-glow" style="--kpi-bg:var(--warning-subtle)"></div>
+          <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+          <div class="kpi-value">${d.totalMovements}</div>
+          <div class="kpi-label">Movimentações</div>
+          <div class="kpi-change up">↑ ${d.totalEntradas} entradas</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:16px;height:16px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Entrada vs Saída (6 meses)
+          </div>
+          <div class="bar-chart">
+            ${d.monthly.map(m=>`<div class="bar-wrap" style="justify-content:flex-end">
+              <div style="display:flex;align-items:flex-end;gap:2px;flex:1;width:100%">
+                <div class="bar bar-in" style="height:${Math.round((m.entradas||0)/maxBar*100)}%"></div>
+                <div class="bar bar-out" style="height:${Math.round((m.saidas||0)/maxBar*100)}%"></div>
+              </div>
+              <div class="bar-label">${m.month}</div>
+            </div>`).join('')}
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--brand-500)"></div>Entrada</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--bg-overlay);border:1px solid var(--border-light)"></div>Saída</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Produtos por Categoria
+          </div>
+          ${d.byCategory.length===0?`<div style="text-align:center;color:var(--text-muted);padding:var(--s8)">Sem dados</div>`:`
+          <div class="donut-wrap">
+            <svg width="120" height="120" viewBox="0 0 120 120">${segs}<circle cx="60" cy="60" r="28" fill="var(--bg-surface)"/>
+              <text x="60" y="64" text-anchor="middle" font-family="var(--font-h)" font-size="14" font-weight="800" fill="var(--text-primary)">${d.totalProducts}</text>
+            </svg>
+            <div class="donut-legend">
+              ${d.byCategory.slice(0,5).map((c,i)=>`<div class="donut-item">
+                <div class="donut-color" style="background:${COLORS[i]}"></div>
+                <div class="donut-name">${c.category}</div>
+                <div class="donut-pct">${Math.round(c.count/total*100)}%</div>
+              </div>`).join('')}
+            </div>
+          </div>`}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Estoque Crítico</div><div class="card-subtitle">Produtos abaixo de 5 unidades</div></div>
+            <a href="produtos.html" style="color:var(--brand-400);font-size:13px;font-weight:600">Ver todos →</a>
+          </div>
+          ${d.criticalProducts.length===0
+            ?`<div style="text-align:center;color:var(--text-muted);padding:var(--s8) 0;font-size:14px">✓ Nenhum produto crítico</div>`
+            :d.criticalProducts.slice(0,5).map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div>
+                  <div style="font-size:13.5px;font-weight:600;color:var(--text-primary)">${p.name}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${p.sku} · ${p.category}</div>
+                </div>
+                <span class="badge badge-danger badge-dot">${p.quantity} un</span>
+              </div>`).join('')}
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Atividade Recente</div><div class="card-subtitle">Últimas ações no sistema</div></div>
+          </div>
+          ${d.recentLogs.length===0
+            ?`<div style="color:var(--text-muted);font-size:13px;padding:var(--s4) 0">Nenhuma atividade</div>`
+            :d.recentLogs.map(l=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div style="width:7px;height:7px;border-radius:50%;background:var(--brand-500);flex-shrink:0;margin-top:5px"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12.5px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.message}</div>
+                  <div style="font-size:11px;color:var(--text-faint)">${l.userName} · ${timeAgo(l.createdAt)}</div>
+                </div>
+              </div>`).join('')}
+        </div>
+      </div>
+    </main>
+  </div>`;
+
+    App.init();
+  }
+
+  loadDashboard();
+}
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+<div vw class="enabled"><div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div></div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+</body>
+</html>

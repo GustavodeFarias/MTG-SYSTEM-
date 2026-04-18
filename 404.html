@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>MTG SYSTEM</title>
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+</head>
+<body>
+<script>
+  App.applyTheme();
+  const s = typeof Auth !== 'undefined' ? API.auth.getSession() : null;
+  window.location.href = s ? 'dashboard.html' : 'index.html';
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(r => console.log('[SW] Registered:', r.scope))
+        .catch(e => console.log('[SW] Error:', e));
+    });
+  }
+</script>
+</body>
+</html>

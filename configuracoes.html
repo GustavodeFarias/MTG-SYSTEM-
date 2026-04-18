@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MTG SYSTEM">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>MTG SYSTEM — Configurações</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+  
+  
+</head>
+<body>
+<div class="app-shell" id="app"></div>
+<div id="toastContainer" class="toast-container"></div>
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal modal-sm"><div class="modal-body"><div class="confirm-dialog">
+    <div class="confirm-icon danger"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <div class="confirm-title">Confirmar ação</div><div class="confirm-message"></div>
+  </div></div><div class="modal-footer">
+    <button class="btn btn-secondary" onclick="Modal.close('confirmModal')">Cancelar</button>
+    <button class="btn btn-danger" id="confirmBtn">Confirmar</button>
+  </div></div>
+</div>
+
+<script>
+const session = requireAuth();
+if (session) {
+  Users.load();
+  const user = Users.getById(session.id) || session;
+  const isDark = (Storage.get('theme') || 'dark') === 'dark';
+
+  document.getElementById('app').innerHTML = renderLayout('Configurações', 'configuracoes.html') + `
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Configurações</h1>
+        <p>Preferências pessoais e do sistema</p>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s6);align-items:start">
+
+      <!-- Profile Card -->
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Meu Perfil</div>
+            <div class="card-subtitle">Editar informações pessoais</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:var(--s4);margin-bottom:var(--s6);padding:var(--s4);background:var(--bg-elevated);border-radius:var(--r-md)">
+          <div style="width:56px;height:56px;border-radius:50%;background:var(--brand-500);display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:800;font-size:24px;color:white;flex-shrink:0">${user.name.charAt(0)}</div>
+          <div>
+            <div style="font-size:16px;font-weight:600;color:var(--text-primary)">${user.name}</div>
+            <div style="font-size:13px;color:var(--text-muted)">${user.email}</div>
+            <span class="badge badge-info" style="margin-top:var(--s1)">${Formatters.rolePT(user.role)}</span>
+          </div>
+        </div>
+        <form id="profileForm">
+          <div class="form-group">
+            <label class="form-label">Nome Completo</label>
+            <input type="text" id="profileName" class="form-input" value="${user.name}">
+            <div class="form-error" data-error="profileName"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-input" value="${user.email}" disabled style="opacity:0.6">
+            <div class="form-hint">O e-mail não pode ser alterado</div>
+          </div>
+          <div class="divider"></div>
+          <div class="form-group">
+            <label class="form-label">Nova Senha</label>
+            <input type="password" id="profilePwd" class="form-input" placeholder="Deixe em branco para manter">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirmar Nova Senha</label>
+            <input type="password" id="profilePwdConfirm" class="form-input" placeholder="••••••••">
+            <div class="form-error" data-error="profilePwdConfirm"></div>
+          </div>
+          <button type="button" class="btn btn-primary w-full" onclick="saveProfile()">
+            <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Salvar Alterações
+          </button>
+        </form>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:var(--s4)">
+        <!-- Theme Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Aparência</div>
+              <div class="card-subtitle">Personalizar interface</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--s4)">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--s4);background:var(--bg-elevated);border-radius:var(--r-md);border:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:var(--s3)">
+                <div style="width:36px;height:36px;background:var(--bg-surface);border-radius:var(--r-md);border:1px solid var(--border);display:flex;align-items:center;justify-content:center">
+                  <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--text-muted)" fill="none" stroke-width="1.8"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-primary)">Modo Escuro</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Interface com fundo escuro</div>
+                </div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="themeToggle" ${isDark?'checked':''} onchange="toggleThemeUI()">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Info Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Sistema</div>
+              <div class="card-subtitle">Informações e manutenção</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--s3)">
+            ${[
+              ['Versão', 'v1.0.0 — MTG SYSTEM'],
+              ['Armazenamento', 'localStorage (simulado)'],
+              ['Ambiente', 'Produção / GitHub Pages'],
+            ].map(([k,v]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:var(--s3) 0;border-bottom:1px solid var(--border)">
+              <span style="font-size:13px;color:var(--text-muted)">${k}</span>
+              <span style="font-size:13px;font-weight:500;color:var(--text-secondary)">${v}</span>
+            </div>`).join('')}
+          </div>
+          <div style="margin-top:var(--s5);display:flex;gap:var(--s3)">
+            <button class="btn btn-secondary btn-sm" onclick="clearCache()">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+              Limpar Cache
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="resetSystem()">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+              Resetar Sistema
+            </button>
+          </div>
+        </div>
+
+        <!-- Access Permissions Info -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Permissões</div>
+              <div class="card-subtitle">Seu nível de acesso atual</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--s2)">
+            ${[
+              ['Dashboard', true],
+              ['Visualizar Produtos', true],
+              ['Editar Produtos', API.auth.can('products_write')],
+              ['Relatórios', API.auth.can('reports') || API.auth.can('products_read')],
+              ['Gerenciar Usuários', session.role === 'admin'],
+              ['Configurações Sistema', session.role === 'admin'],
+            ].map(([perm, has]) => `<div style="display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0">
+              <div style="width:20px;height:20px;border-radius:50%;background:${has?'var(--success-subtle)':'var(--danger-subtle)'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <svg viewBox="0 0 24 24" width="12" height="12" stroke="${has?'var(--success)':'var(--danger)'}" fill="none" stroke-width="3">
+                  ${has?'<polyline points="20 6 9 17 4 12"/>':'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}
+                </svg>
+              </div>
+              <span style="font-size:13px;color:${has?'var(--text-secondary)':'var(--text-faint)'}">${perm}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger Zone (Admin only) -->
+    ${session.role === 'admin' ? `
+    <div style="margin-top:var(--s8)">
+      <div style="padding:var(--s5);border:1px solid rgba(224,48,0,0.3);border-radius:var(--r-lg);background:var(--danger-subtle)">
+        <div style="font-family:var(--font-h);font-size:18px;font-weight:700;color:var(--brand-400);margin-bottom:var(--s2)">⚠ Zona de Perigo</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:var(--s4)">Ações irreversíveis. Use com extrema cautela.</div>
+        <div style="display:flex;gap:var(--s3);flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="clearAllData()">Apagar todos os dados</button>
+          <button class="btn btn-danger btn-sm" onclick="API.auth.logout()">Forçar logout de todos</button>
+        </div>
+      </div>
+    </div>` : ''}
+  </main>
+</div>`;
+
+  App.init();
+}
+
+function saveProfile() {
+  Validators.clearErrors();
+  const name = document.getElementById('profileName').value.trim();
+  const pwd = document.getElementById('profilePwd').value;
+  const pwdConfirm = document.getElementById('profilePwdConfirm').value;
+  const errs = {};
+  if (!name) errs.profileName = 'Campo obrigatório';
+  if (pwd && pwd.length < 6) errs.profilePwd = 'Mínimo 6 caracteres';
+  if (pwd && pwd !== pwdConfirm) errs.profilePwdConfirm = 'As senhas não coincidem';
+  if (Object.keys(errs).length) { Validators.showErrors(errs); return; }
+  Users.load();
+  const data = { name };
+  if (pwd) data.password = pwd;
+  Users.update(session.id, data);
+  const s = API.auth.getSession();
+  s.name = name;
+  Storage.set('session', s);
+  Toast.success('Perfil atualizado!', 'Suas informações foram salvas');
+  Auth.logAction('profile_update', `Perfil atualizado: ${name}`);
+  setTimeout(() => location.reload(), 1000);
+}
+
+function toggleThemeUI() {
+  App.toggleTheme();
+  setTimeout(() => {
+    const isDark = (Storage.get('theme') || 'dark') === 'dark';
+    const toggle = document.getElementById('themeToggle');
+    if (toggle) toggle.checked = isDark;
+  }, 100);
+}
+
+function clearCache() {
+  Storage.remove('logs');
+  Toast.success('Cache limpo!', 'Histórico de logs removido');
+}
+
+function resetSystem() {
+  Modal.confirm({ title: 'Resetar sistema?', message: 'Todos os dados serão removidos e o sistema voltará ao estado inicial com dados demo.', onConfirm: () => {
+    Storage.remove('seeded');
+    Storage.remove('products');
+    Storage.remove('users');
+    Storage.remove('movements');
+    Storage.remove('logs');
+    Storage.remove('sku_counter');
+    Toast.info('Sistema resetado', 'Redirecionando...');
+    setTimeout(() => window.location.href = 'index.html', 1200);
+  }});
+}
+
+function clearAllData() {
+  Modal.confirm({ title: 'Apagar TODOS os dados?', message: 'Esta ação é permanente e irreversível. Todos os produtos, usuários e logs serão excluídos.', onConfirm: () => {
+    Storage.clear();
+    Toast.warning('Dados apagados', 'Redirecionando...');
+    setTimeout(() => window.location.href = 'index.html', 1200);
+  }});
+}
+</script>
+
+<!-- VLibras - Acessibilidade em LIBRAS -->
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper>
+    <div class="vw-plugin-top-wrapper"></div>
+  </div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(r => console.log('[SW] Registered:', r.scope))
+        .catch(e => console.log('[SW] Error:', e));
+    });
+  }
+</script>
+</body>
+</html>

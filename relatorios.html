@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MTG SYSTEM">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>MTG SYSTEM — Relatórios</title>
+  <link rel="stylesheet" href="app-bundle.css">
+  <script src="app-bundle.js"></script>
+  <script src="api-client.js"></script>
+  
+  
+</head>
+<body>
+<div class="app-shell" id="app"></div>
+<div id="toastContainer" class="toast-container"></div>
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal modal-sm"><div class="modal-body"><div class="confirm-dialog">
+    <div class="confirm-icon danger"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <div class="confirm-title">Confirmar ação</div><div class="confirm-message"></div>
+  </div></div><div class="modal-footer">
+    <button class="btn btn-secondary" onclick="Modal.close('confirmModal')">Cancelar</button>
+    <button class="btn btn-danger" id="confirmBtn">Confirmar</button>
+  </div></div>
+</div>
+
+<script>
+const session = requireAuth();
+if (session) {
+  if (!API.auth.can('reports') && !API.auth.can('products_read')) {
+    Toast.error('Acesso negado'); setTimeout(() => window.location.href = 'dashboard.html', 1500);
+  }
+  Products.load();
+
+  const criticalProducts = Products.getCritical();
+  const lowProducts = Products.getLow();
+  const totalValue = Products.getTotalValue();
+  const byCategory = Products.getByCategory();
+
+  document.getElementById('app').innerHTML = renderLayout('Relatórios', 'relatorios.html') + `
+  <main class="page-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Relatórios</h1>
+        <p>Análises e exportações do estoque</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary" onclick="exportCSV()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+        <button class="btn btn-primary" onclick="exportPDF()">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Exportar PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary KPIs -->
+    <div class="kpi-grid" style="margin-bottom:var(--s6)">
+      <div class="kpi-card" style="--kpi-color:var(--brand-400);--kpi-bg:var(--brand-subtle)">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+        <div class="kpi-value">${Products.all.length}</div>
+        <div class="kpi-label">Total de SKUs</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--success);--kpi-bg:var(--success-subtle)">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+        <div class="kpi-value" style="font-size:20px">${Formatters.currency(totalValue)}</div>
+        <div class="kpi-label">Valor Total em Estoque</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--danger);--kpi-bg:var(--danger-subtle)">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="kpi-value">${criticalProducts.length}</div>
+        <div class="kpi-label">Produtos Críticos</div>
+      </div>
+      <div class="kpi-card" style="--kpi-color:var(--warning);--kpi-bg:var(--warning-subtle)">
+        <div class="kpi-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="kpi-value">${lowProducts.length}</div>
+        <div class="kpi-label">Estoque Baixo</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="reportTabs">
+      <div class="tab active" onclick="showReport('stock',this)">Estoque Completo</div>
+      <div class="tab" onclick="showReport('critical',this)">Críticos e Baixos</div>
+      <div class="tab" onclick="showReport('byCategory',this)">Por Categoria</div>
+      <div class="tab" onclick="showReport('value',this)">Valor por Produto</div>
+    </div>
+
+    <div id="reportContent"></div>
+  </main>
+</div>`;
+
+  App.init();
+  showReport('stock', document.querySelector('.tab.active'));
+}
+
+function showReport(type, el) {
+  document.querySelectorAll('#reportTabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  Products.load();
+  let html = '';
+
+  if (type === 'stock') {
+    const sorted = Helpers.sortArray(Products.all, 'name', 'asc');
+    html = `<div class="table-container">
+      <div class="table-toolbar" style="justify-content:flex-end">
+        <span style="font-size:13px;color:var(--text-muted)">${sorted.length} produtos</span>
+      </div>
+      <table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Preço Unit.</th><th>Valor R$</th><th>Valor £</th><th>Status</th></tr></thead>
+      <tbody>${sorted.map(p => `<tr>
+        <td style="font-family:var(--font-h);font-size:12px;color:var(--text-muted);letter-spacing:1px">${p.sku}</td>
+        <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
+        <td><span class="badge badge-neutral">${p.category}</span></td>
+        <td style="font-weight:700;color:var(--text-primary)">${p.quantity}</td>
+        <td>${Formatters.currency(p.price)}</td>
+        <td style="font-weight:600;color:var(--success)">${Formatters.currency(p.price * p.quantity)}</td>
+        <td style="font-weight:600;color:#4fc3f7">${p.pricePounds ? '£ ' + Number(p.pricePounds).toFixed(2) : '—'}</td>
+        <td>${Helpers.stockBadge(p.quantity)}</td>
+      </tr>`).join('')}</tbody></table>
+      <div style="padding:var(--s4) var(--s5);border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:var(--s8)">
+        <span style="font-size:14px;color:var(--text-muted)">Total Geral:</span>
+        <span style="font-family:var(--font-h);font-size:20px;font-weight:700;color:var(--success)">${Formatters.currency(Products.getTotalValue())}</span>
+      </div>
+    </div>`;
+  } else if (type === 'critical') {
+    const items = [...Products.getCritical(), ...Products.getLow()];
+    html = `<div class="table-container">
+      <div class="table-toolbar">
+        <div style="font-size:13px;color:var(--text-muted)">${items.length > 0 ? `<span style="color:var(--danger)">⚠ ${items.length} produto(s) precisam de atenção</span>` : '✓ Nenhum produto em situação crítica'}</div>
+      </div>
+      <table><thead><tr><th>SKU</th><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Status</th><th>Fornecedor</th></tr></thead>
+      <tbody>${items.length === 0 ? '<tr><td colspan="6"><div class="table-empty"><p>Todos os produtos estão com estoque adequado</p></div></td></tr>' :
+      items.map(p => `<tr>
+        <td style="font-family:var(--font-h);font-size:12px;color:var(--text-muted);letter-spacing:1px">${p.sku}</td>
+        <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
+        <td><span class="badge badge-neutral">${p.category}</span></td>
+        <td style="font-weight:700;color:${p.quantity<5?'var(--danger)':'var(--warning)'}">${p.quantity}</td>
+        <td>${Helpers.stockBadge(p.quantity)}</td>
+        <td style="color:var(--text-muted)">${p.supplier || '—'}</td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+  } else if (type === 'byCategory') {
+    const cats = Products.getByCategory();
+    const entries = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+    const totalProd = Products.all.length;
+    html = `<div class="table-container">
+      <table><thead><tr><th>Categoria</th><th>Qtd Produtos</th><th>% do Total</th><th>Valor em Estoque</th><th>Distribuição</th></tr></thead>
+      <tbody>${entries.map(([cat, count]) => {
+        const catValue = Products.all.filter(p=>p.category===cat).reduce((s,p)=>s+(p.price*p.quantity),0);
+        const pct = Math.round(count/totalProd*100);
+        return `<tr>
+          <td style="font-weight:600;color:var(--text-primary)">${cat}</td>
+          <td style="font-family:var(--font-h);font-size:16px;font-weight:700;color:var(--text-primary)">${count}</td>
+          <td><span class="badge badge-info">${pct}%</span></td>
+          <td style="color:var(--success);font-weight:600">${Formatters.currency(catValue)}</td>
+          <td style="min-width:150px">
+            <div style="display:flex;align-items:center;gap:var(--s2)">
+              <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:12px;color:var(--text-muted);min-width:30px">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table>
+    </div>`;
+  } else if (type === 'value') {
+    const sorted = Helpers.sortArray(Products.all, 'price', 'desc').map(p=>({...p, totalValue: p.price*p.quantity}));
+    html = `<div class="table-container">
+      <table><thead><tr><th>Produto</th><th>Categoria</th><th>Qtd</th><th>Preço Unit.</th><th>Valor Total</th><th>% do Estoque</th></tr></thead>
+      <tbody>${sorted.map(p => {
+        const pct = totalValue > 0 ? ((p.price*p.quantity)/totalValue*100).toFixed(1) : 0;
+        return `<tr>
+          <td style="font-weight:600;color:var(--text-primary)">${p.name}</td>
+          <td><span class="badge badge-neutral">${p.category}</span></td>
+          <td>${p.quantity}</td>
+          <td>${Formatters.currency(p.price)}</td>
+          <td style="font-weight:700;color:var(--success)">${Formatters.currency(p.price*p.quantity)}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:var(--s2)">
+              <div class="progress-bar" style="flex:1;max-width:80px"><div class="progress-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:12px;color:var(--text-muted)">${pct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}</tbody></table>
+    </div>`;
+  }
+  document.getElementById('reportContent').innerHTML = html;
+}
+
+function exportCSV() {
+  Products.load();
+  const data = Products.all.map(p => ({
+    SKU: p.sku, Nome: p.name, Categoria: p.category, Quantidade: p.quantity,
+    Preco_BRL: p.price, Valor_Total_BRL: (p.price * p.quantity).toFixed(2),
+    Valor_Libras: p.pricePounds ? Number(p.pricePounds).toFixed(2) : '',
+    Fornecedor: p.supplier || '', Status: Helpers.getStockStatus(p.quantity)
+  }));
+  Helpers.exportCSV(data, 'relatorio_estoque_mtgsystem');
+  Toast.success('CSV exportado!', 'Arquivo baixado com sucesso');
+  Auth.logAction('export', 'Relatório CSV exportado');
+}
+
+function exportPDF() {
+  Auth.logAction('export', 'Relatório PDF exportado');
+  Helpers.simulatePDFExport('Relatório de Estoque MTG SYSTEM');
+}
+window.showReport = showReport;
+</script>
+
+<!-- VLibras - Acessibilidade em LIBRAS -->
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper>
+    <div class="vw-plugin-top-wrapper"></div>
+  </div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>new window.VLibras.Widget("https://vlibras.gov.br/app");</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(r => console.log('[SW] Registered:', r.scope))
+        .catch(e => console.log('[SW] Error:', e));
+    });
+  }
+</script>
+</body>
+</html>
